@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="en-us">
+<head>
+	<meta charset="utf-8">
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+	<title>Altar War</title>
+	<style type="text/css">:fullscreen{background:#000;margin:0!important}:full-screen{background:#000;margin:0!important}:-webkit-full-screen{background:#000;margin:0!important}:-moz-full-screen{background:#000;margin:0!important}</style>
+</head>
+<body style="background:#CCCCCC;font-family:sans-serif">
+	<h1 style="text-align:center">Altar War</h1>
+	<h2 id="zl_status" style="text-align:center">Loading Game...</h2>
+	<canvas id="zl_canvas" style="display:block;margin:0 auto 10px" oncontextmenu="event.preventDefault()" width="0" height="0"></canvas>
+	<div id="zl_control" style="text-align:center;display:none"><input type="button" value="Switch Fullscreen" onclick="try{_ZLJS_SetFullscreen(true)}catch(e){}"></div>
+	<div style="text-align:center;margin:20px">Made with <a href="https://zillalib.github.io/" target="_blank">ZillaLib Game Framework</a></div>
+	<script type='text/javascript'>
+	var Module =
+	{
+		canvas: document.getElementById('zl_canvas'),
+		print: function() {},
+		postRun: function()
+		{
+			var L = function(id)
+			{
+				if (id == 'NO_WEBGL') return 'Your browser or graphics card does not seem to support <a href="http://khronos.org/webgl/wiki/Getting_a_WebGL_Implementation" style="color:#000">WebGL</a>.<br>Find out how to get it <a href="http://get.webgl.org/" style="color:#000">here</a>.';
+				if (id ==  'IEWEBGL') return '<br><br>On Internet Explorer older than version 11 you can try the <a href="https://github.com/iewebgl/iewebgl" style="color:#000">IEWebGL</a> plugin.';
+			};
+			var zl_status = document.getElementById('zl_status'), zl_control = document.getElementById('zl_control');
+			if (parseInt(navigator.userAgent.split('MSIE').slice(-1)[0]) < 11)
+			{
+				Module.canvas.outerHTML = '<object id="zl_iecanvas" type="application/x-webgl" style="' + Module.canvas.style.cssText + ' " oncontextmenu="event.preventDefault()" width="0" height="0"></object>';
+				Module.canvas = document.getElementById('zl_iecanvas');
+			}
+			if (!Module.noExitRuntime)
+			{
+				zl_control.innerHTML = '<div style="text-align:center;background-color:#FFF;color:#000;padding:1.5em;width:540px;margin:2em auto">' + L('NO_WEBGL') + (parseInt(navigator.userAgent.split('MSIE').slice(-1)[0]) < 11 ? L('IEWEBGL') : '') + '</div>';
+				Module.canvas.style.display = 'none';
+			}
+			zl_status.innerHTML = '';
+			zl_control.style.display = '';
+		},
+	};
+	window.onerror = function(e,u,l){alert(e);};
+	</script>
+	<script src="AltarWar.js" type="text/javascript"></script>
+</body>
+</html>
