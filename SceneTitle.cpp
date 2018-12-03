@@ -108,7 +108,7 @@ struct sSceneTitle : public ZL_Scene
 		{
 			if (Title[i] == ' ') continue;
 			const char Letter[] = { Title[i], '\0' };
-			int isbig = ((index % sizeof(Title)) == i);
+			bool isbig = ((int)(index % sizeof(Title)) == i);
 			float x = 350 + LetterX + (isbig ? rnd.Range(-15, 15)*RAND_FACTOR : rnd.Range(-10, 10));
 			float y = (isbig ? rnd.Range(-15, 15)*RAND_FACTOR : rnd.Range(-10, 10));
 			float scl = (isbig ? scaletick*2 : 2.0f);

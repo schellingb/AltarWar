@@ -30,7 +30,7 @@ static ZL_Light Light;
 static ZL_TextBuffer StatusText;
 
 enum { MAPW = 23, MAPH = 19 };
-static union { char Map[MAPW*MAPH], MapDebug[MAPH][MAPW]; };
+static char Map[MAPW*MAPH];
 static const float WALLHEIGHT = .6f, WALLHEIGHTHALF = WALLHEIGHT*.5f;
 static const float WALLSZ = .5f, I_WALLSZ = 1/WALLSZ, WALLSZHALF = WALLSZ*.5f, MAPSTARTX = (MAPW-1)*-(WALLSZ/2), MAPSTARTY = (MAPH-1)*-(WALLSZ/2);
 static const float MAPMINX = MAPSTARTX + KINDA_SMALL_NUMBER, MAPMAXX = -MAPSTARTX - KINDA_SMALL_NUMBER, MAPMINY = MAPSTARTY + KINDA_SMALL_NUMBER, MAPMAXY = -MAPSTARTY - KINDA_SMALL_NUMBER;
@@ -287,6 +287,7 @@ static void MakeMaze()
 			case 1: cx = x = RAND_INT_RANGE(1, MAPW-2), y = MAPH-1; cy = MAPH-2; break; //bottom
 			case 2: cy = y = RAND_INT_RANGE(1, MAPH-2), x =      0, cx =      1; break; //left
 			case 3: cy = y = RAND_INT_RANGE(1, MAPH-2), x = MAPW-1, cx = MAPW-2; break; //right
+			default: continue;
 		}
 		if (Map[y*MAPW+x] <= ' ' || Map[cy*MAPW+cx] > ' ') continue;
 		Map[y*MAPW+x] = ' ';
@@ -335,19 +336,20 @@ static void MakeMaze()
 
 static void InitGame()
 {
-	Enemies.clear();
-
 	memset(&Player, 0, sizeof(Player));
 	Player.Mtx = ZL_Matrix::MakeTranslate(0, WALLSZ);
 
 	Altar.Mtx = ZL_Matrix::Identity;
 	Altar.Rect = ZL_Rectf(ZLV(0, 0), ZLV(.12, .24));
 	Altar.Power = Altar.PowerTarget = ALTAR_MAX_POWER - 2;
-	Phase = 0;
 	EnemiesKilled = EnemiesSacrificed = 0;
-	MakeMaze();
+	Enemies.clear();
+
 	GameState = STATE_PLAYING;
 	GamePlayTicks = 0;
+
+	Phase = 0;
+	MakeMaze();
 }
 
 static void SpawnEnemy()
@@ -370,7 +372,7 @@ static void GameCalculate()
 	}
 	if (GameState == STATE_GAMEOVER)
 	{
-		if (ZLSINCE(GameStateTick) > 1000 && ZL_Input::Down(ZLK_ESCAPE)) ZL_SceneManager::GoToScene(SCENE_TITLE);
+		if (ZLSINCE(GameStateTick) > 1500 && (ZL_Input::Down(ZLK_ESCAPE) || ZL_Input::Down(ZLK_RETURN) || ZL_Input::Down(ZLK_SPACE))) ZL_SceneManager::GoToScene(SCENE_TITLE);
 		return;
 	}
 
@@ -629,9 +631,12 @@ static void GameDraw()
 	ZL_Display3D::DrawListsWithLight(RenderLists, 2, Camera, Light);
 
 	#ifdef ZILLALOG
-	ZL_Display3D::BeginRendering();
-	for (sEnemy& e : Enemies) if (!e.Dead) ZL_Display3D::DrawLine(Camera, e.Mtx.GetTranslate(), e.MoveTarget);
-	ZL_Display3D::FinishRendering();
+	if (ZL_Input::Held(ZLK_TAB))
+	{
+		ZL_Display3D::BeginRendering();
+		for (sEnemy& e : Enemies) if (!e.Dead) ZL_Display3D::DrawLine(Camera, e.Mtx.GetTranslate(), e.MoveTarget);
+		ZL_Display3D::FinishRendering();
+	}
 	#endif
 
 	//Draw 2D
@@ -671,7 +676,7 @@ static void GameDraw()
 		ZL_Display::FillRect(POPUPPOS.x-400+4, POPUPPOS.y-100+4, POPUPPOS.x+400-4, POPUPPOS.y+100-4, ZLBLACK);
 		Font.Draw(POPUPPOS.x, POPUPPOS.y-100+160, "GAME OVER", ZL_Origin::Center);
 		Font.Draw(POPUPPOS.x, POPUPPOS.y-100+100, "You died - thank you for your sacrifice", ZL_Origin::Center);
-		Font.Draw(POPUPPOS.x, POPUPPOS.y-100+45, "Press [ESC] to return to title", ZL_Origin::Center);
+		Font.Draw(POPUPPOS.x, POPUPPOS.y-100+45, "Press [SPACE] to return to title", ZL_Origin::Center);
 		ZL_Display::PopMatrix();
 	}
 }
