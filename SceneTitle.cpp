@@ -1,6 +1,6 @@
 /*
   Altar War
-  Copyright (C) 2018 Bernhard Schelling
+  Copyright (C) 2018-2019 Bernhard Schelling
 
   This software is provided 'as-is', without any express or implied
   warranty.  In no event will the authors be held liable for any damages
@@ -58,8 +58,8 @@ struct sSceneTitle : public ZL_Scene
 	void OnPointerUp(ZL_PointerPressEvent& e)
 	{
 		if (e.y < 60 && e.x < 480) ZL_Application::OpenExternalUrl("https://zillalib.github.io/");
-		if (e.x >= ZLFROMW(220) && e.y >= ZLFROMH(150)) ZL_Application::OpenExternalUrl("http://www.onegameamonth.com/B_Schelling");
-		if (e.y < 60 && e.x > ZLFROMW(400)) ZL_Application::OpenExternalUrl("http://www.ludumdare.com/compo/ludum-dare-27/?action=preview&uid=20775");
+		else if (e.y < 60 && e.x > ZLFROMW(400)) ZL_Application::OpenExternalUrl("http://www.ludumdare.com/compo/ludum-dare-27/?action=preview&uid=20775");
+		else ZL_SceneManager::GoToScene(SCENE_GAME);
 	}
 
 	void OnKeyDown(ZL_KeyboardEvent& e)
@@ -120,10 +120,22 @@ struct sSceneTitle : public ZL_Scene
 
 		ZL_Color ColText = ZLRGBA(1,.5,.5,.5), ColBorder = ZLLUMA(0,.5);
 		DrawTextBordered(ZL_Vector(ZLHALFW,110), "Slay and sacrifice the demons on the altar to keep the light ignited !", 0.5f, ColText, ColBorder);
-		DrawTextBordered(ZL_Vector(ZLHALFW,75), "[WASD] Move  |  [SPACE] Attack  |  [ENTER] Pick up & Sacrifice", 0.5f, ColText, ColBorder);
-		DrawTextBordered(ZL_Vector(ZLHALFW,40), "PRESS [ENTER] TO BEGIN THE SLAUGHTER", 0.4f, ColText, ColBorder);
-		DrawTextBordered(ZL_Vector(ZLHALFW,15), "[ALT+ENTER] Toggle Fullscreen", 0.3f, ColText, ColBorder);
-		DrawTextBordered(ZL_Vector(18, 12), "(C) 2018 Bernhard Schelling", s(.6), ZLRGBA(1,.8,.2,.5), ColBorder, 2, ZL_Origin::BottomLeft);
+		if (showTouchUI)
+		{
+			DrawTextBordered(ZL_Vector(ZLHALFW,75), "     Move  |       Attack  |       Pick up & Sacrifice", 0.5f, ColText, ColBorder);
+			extern ZL_Surface srfTouchButtons;
+			srfTouchButtons.SetTilesetIndex(2).Draw(ZLHALFW-233,82,.3f,.3f);
+			srfTouchButtons.SetTilesetIndex(0).Draw(ZLHALFW-106,82,.3f,.3f);
+			srfTouchButtons.SetTilesetIndex(1).Draw(ZLHALFW+ 37,82,.3f,.3f);
+			DrawTextBordered(ZL_Vector(ZLHALFW,40), "TAP SCREEN TO BEGIN THE SLAUGHTER", 0.4f, ColText, ColBorder);
+		}
+		else
+		{
+			DrawTextBordered(ZL_Vector(ZLHALFW,75), "[WASD] Move  |  [SPACE] Attack  |  [ENTER] Pick up & Sacrifice", 0.5f, ColText, ColBorder);
+			DrawTextBordered(ZL_Vector(ZLHALFW,40), "PRESS [ENTER] TO BEGIN THE SLAUGHTER", 0.4f, ColText, ColBorder);
+			DrawTextBordered(ZL_Vector(ZLHALFW,15), "[ALT+ENTER] Toggle Fullscreen", 0.3f, ColText, ColBorder);
+		}
+		DrawTextBordered(ZL_Vector(18, 12), "(C) 2018-2019 Bernhard Schelling", s(.6), ZLRGBA(1,.8,.2,.5), ColBorder, 2, ZL_Origin::BottomLeft);
 
 		srfLudumDare.Draw(ZLFROMW(10), 10);
 	}

@@ -1,6 +1,6 @@
 /*
   Altar War
-  Copyright (C) 2018 Bernhard Schelling
+  Copyright (C) 2018-2019 Bernhard Schelling
 
   This software is provided 'as-is', without any express or implied
   warranty.  In no event will the authors be held liable for any damages
@@ -22,6 +22,11 @@
 #include "include.h"
 
 ZL_Font Font;
+#ifdef __SMARTPHONE__
+bool showTouchUI = true;
+#else
+bool showTouchUI = false;
+#endif
 
 static struct sAltarWar : public ZL_Application
 {
@@ -42,6 +47,12 @@ static struct sAltarWar : public ZL_Application
 		imcTheme.Play(true);
 		ZL_SceneManager::Init(SCENE_TITLE);
 		//ZL_SceneManager::Init(SCENE_GAME);
+	}
+
+	virtual void BeforeFrame()
+	{
+		if (showTouchUI && ZL_Input::KeyDownCount()) showTouchUI = false;
+		else if (!showTouchUI && ZL_Input::Down(ZL_BUTTON_LEFT)) showTouchUI = true;
 	}
 } AltarWar;
 

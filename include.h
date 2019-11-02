@@ -1,6 +1,6 @@
 /*
   Altar War
-  Copyright (C) 2018 Bernhard Schelling
+  Copyright (C) 2018-2019 Bernhard Schelling
 
   This software is provided 'as-is', without any express or implied
   warranty.  In no event will the authors be held liable for any damages
@@ -37,6 +37,7 @@ extern ZL_Font Font;
 extern ZL_Sound sndDeath, sndSwing, sndHit, sndSacrifice;
 extern ZL_SynthImcTrack imcTheme, imcGameOver;
 extern ZL_Mesh MeshAltar, MeshGround, MeshPlayer, MeshWall, MeshSword, MeshClaw, MeshDemon;
+extern bool showTouchUI;
 
 #define SCENE_TITLE 1
 #define SCENE_GAME 2

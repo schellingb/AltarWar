@@ -1,6 +1,6 @@
 /*
   Altar War
-  Copyright (C) 2018 Bernhard Schelling
+  Copyright (C) 2018-2019 Bernhard Schelling
 
   This software is provided 'as-is', without any express or implied
   warranty.  In no event will the authors be held liable for any damages
@@ -59,6 +59,52 @@ static ticks_t GamePlayTicks;
 #define GAMEPASSED(t)        (((int)(GamePlayTicks-(ticks_t)(t)))>=0)
 #define GAMESINCE(t)         ((int)(GamePlayTicks-(ticks_t)(t)))
 #define GAMEUNTIL(t)         ((int)((ticks_t)(t)-GamePlayTicks))
+
+struct TouchUIButton
+{
+	int pnum; ZL_Rectf rec;
+	bool CheckDown(float x, float y, float extendsX, float extendsY)
+	{
+		rec = ZL_Rectf::FromCenter(x, y, extendsX, extendsY);
+		if (pnum && (ZL_Input::PointerUp(pnum, 1, true) || !rec.Contains(ZL_Input::Pointer(pnum)))) { pnum = 0; return false; }
+		return (!pnum && (pnum = ZL_Input::Down(rec, 1, true)));
+	}
+	bool CheckUp(float x, float y, float extendsX, float extendsY)
+	{
+		rec = ZL_Rectf::FromCenter(x, y, extendsX, extendsY);
+		if (pnum && ZL_Input::PointerUp(pnum, 1, true)) { bool res = rec.Contains(ZL_Input::Pointer(pnum)); pnum = 0; return res; }
+		else { if (!pnum) pnum = ZL_Input::Down(rec, 1, true); return false; }
+	}
+	void Draw(ZL_Surface& srf)
+	{
+		scalar off = (pnum && rec.Contains(ZL_Input::Pointer(pnum)) ? 3.f : 0.f);
+		srf.DrawTo(rec.left+5, rec.low-5, rec.right+5, rec.high-5, ZLBLACK);
+		srf.DrawTo(rec.left+off, rec.low-off, rec.right+off, rec.high-off, (pnum ? ZLLUM(0.8) : ZLOPAQUE));
+	}
+};
+struct TouchUIStick
+{
+	int pnum; ZL_Rectf rec; ZL_Vector val;
+	void Check(float x, float y, float extendsRad, ZL_Vector* inOutVal)
+	{
+		rec = ZL_Rectf(x, y, extendsRad);
+		if (pnum && ZL_Input::PointerUp(pnum, 1, true)) { pnum = 0; val = ZLV(0, 0); }
+		else if (!pnum) pnum = ZL_Input::Down(rec, 1, true);
+		if (pnum) *inOutVal = val = (rec.Center() - ZL_Input::Pointer(pnum)).SetMaxLength(70.f) / 70.f;
+	}
+	void Draw(ZL_Surface& srfBack, ZL_Surface& srfNub)
+	{
+		srfBack.DrawTo(rec.left+5, rec.low-5, rec.right+5, rec.high-5, ZLBLACK);
+		srfBack.DrawTo(rec.left, rec.low, rec.right, rec.high, (pnum ? ZLLUM(0.8) : ZLOPAQUE));
+		srfNub.Draw(rec.Center() - val * 70.f + ZLV(5,-5), 4, 4, ZLBLACK);
+		srfNub.Draw(rec.Center() - val * 70.f, 4, 4, (pnum ? ZLLUM(0.8) : ZLOPAQUE));
+	}
+};
+
+ZL_Surface srfTouchButtons, srfTouchPause, srfTouchNub;
+static TouchUIButton touchPickup, touchAttack, touchPause; 
+static TouchUIStick touchJoy;
+static void TouchUIReset() { touchJoy.pnum = touchPickup.pnum = touchAttack.pnum = touchPause.pnum = 0; }
 
 static ZL_Vector AStarMoveTarget(ZL_Vector from, ZL_Vector to)
 {
@@ -139,6 +185,10 @@ static void LoadAssets()
 	ParticleSmoke.SetLifetimeSize(.5f, .05f);
 	ParticleSmoke.SetSpawnVelocityRanges(ZLV3(-.2,-.2,1), ZLV3(.2,.2,2));
 	ParticleSmoke.SetLifetimeAlpha(.3f, 0);
+
+	srfTouchButtons = ZL_Surface("Data/touchinput.png").SetOrigin(ZL_Origin::Center).SetTilesetClipping(2, 2);
+	srfTouchPause = srfTouchButtons.Clone().SetClipping(ZL_Rect(64, 64, 128, 88));
+	srfTouchNub = srfTouchButtons.Clone().SetClipping(ZL_Rect(96, 96, 120, 120));
 }
 
 struct sThing
@@ -350,6 +400,8 @@ static void InitGame()
 
 	Phase = 0;
 	MakeMaze();
+
+	TouchUIReset();
 }
 
 static void SpawnEnemy()
@@ -368,11 +420,13 @@ static void GameCalculate()
 	{
 		if (ZL_Input::Down(ZLK_ESCAPE)) ZL_SceneManager::GoToScene(SCENE_TITLE);
 		if (ZL_Input::Down(ZLK_RETURN) || ZL_Input::Down(ZLK_SPACE)) { GameState = STATE_PLAYING; }
+		if (ZL_Input::Clicked(ZL_Rectf(ZLHALFW-400, ZLHALFH-100, ZLHALFW+400, ZLHALFH+100))) ZL_SceneManager::GoToScene(SCENE_TITLE);
+		if (touchPause.CheckUp(ZLFROMW(100), ZLFROMH(50), 80.f, 31.25f)) { GameState = STATE_PLAYING; TouchUIReset(); }
 		return;
 	}
 	if (GameState == STATE_GAMEOVER)
 	{
-		if (ZLSINCE(GameStateTick) > 1500 && (ZL_Input::Down(ZLK_ESCAPE) || ZL_Input::Down(ZLK_RETURN) || ZL_Input::Down(ZLK_SPACE))) ZL_SceneManager::GoToScene(SCENE_TITLE);
+		if (ZLSINCE(GameStateTick) > 1500 && (ZL_Input::Down(ZLK_ESCAPE) || ZL_Input::Down(ZLK_RETURN) || ZL_Input::Down(ZLK_SPACE) || ZL_Input::Clicked())) ZL_SceneManager::GoToScene(SCENE_TITLE);
 		return;
 	}
 
@@ -383,7 +437,14 @@ static void GameCalculate()
 	if (ZL_Input::Held(ZLK_TAB)) { ZL_Application::ElapsedTicks *= 4; ZL_Application::Elapsed *= 4; }
 	#endif
 
-	if (ZL_Input::Down(ZLK_ESCAPE)) { GameState = STATE_PAUSED; GameStateTick = ZLTICKS; return; }
+	if (ZL_Input::Down(ZLK_ESCAPE) || touchPause.CheckUp(ZLFROMW(100), ZLFROMH(50), 80.f, 31.25f))
+	{
+		GameState = STATE_PAUSED;
+		GameStateTick = ZLTICKS;
+		TouchUIReset();
+		return;
+	}
+
 	GamePlayTicks += ZLELAPSEDTICKS;
 
 	//Update Player
@@ -400,6 +461,11 @@ static void GameCalculate()
 		ZL_Vector PlayerDir = ZLV(((ZL_Input::Held(ZLK_D) || ZL_Input::Held(ZLK_RIGHT)) ? -1.0f : ((ZL_Input::Held(ZLK_A) || ZL_Input::Held(ZLK_LEFT)) ? 1.0f : 0)), 
 		                          ((ZL_Input::Held(ZLK_W) || ZL_Input::Held(ZLK_UP   )) ? -1.0f : ((ZL_Input::Held(ZLK_S) || ZL_Input::Held(ZLK_DOWN)) ? 1.0f : 0)));
 		if (PlayerDir.x && PlayerDir.y) PlayerDir.Norm();
+		touchJoy.Check(140.f, 140.f, 120.f, &PlayerDir);
+
+		bool DoPickup = ZL_Input::Down(ZLK_RETURN) || touchPickup.CheckDown(ZLFROMW(100), 270, 80.f, 80.f);
+		bool DoAttack = ZL_Input::Down(ZLK_SPACE)  || touchAttack.CheckDown(ZLFROMW(100), 100, 80.f, 80.f);
+
 		Player.UpdatePos(.2f, PlayerDir, (Player.Carrying ? PLAYER_SPEED_CARRYING : PLAYER_SPEED_NORMAL), true);
 		Camera.SetLookAt(ZLV3(0, 3.4,  4.2) + Player.Mtx.GetTranslate() * .7f, ZLV3(0,.5,0) + Player.Mtx.GetTranslate() * .8f);
 		if (Player.AttackSwing)
@@ -407,8 +473,6 @@ static void GameCalculate()
 			Player.AttackSwing += ZLELAPSEDF(30);
 			if (Player.AttackSwing > PI2) Player.AttackSwing = 0;
 		}
-		bool DoAttack = ZL_Input::Down(ZLK_SPACE);
-		bool DoPickup = ZL_Input::Down(ZLK_RETURN);
 		bool DoAutoDrop = (DoAttack && Player.Carrying);
 		if (DoPickup || DoAutoDrop)
 		{
@@ -661,11 +725,20 @@ static void GameDraw()
 		ZL_Display::FillRect(ZLHALFW-400,   ZLHALFH-100,   ZLHALFW+400,   ZLHALFH+100,   ZLWHITE);
 		ZL_Display::FillRect(ZLHALFW-400+4, ZLHALFH-100+4, ZLHALFW+400-4, ZLHALFH+100-4, ZLBLACK);
 		Font.Draw(ZLHALFW, ZLHALFH-100+160, "PAUSE", ZL_Origin::Center);
-		Font.Draw(ZLHALFW, ZLHALFH-100+100, "Press [ESC] again to return to title", ZL_Origin::Center);
-		Font.Draw(ZLHALFW, ZLHALFH-100+45, "Press [SPACE] continue", ZL_Origin::Center);
+		if (showTouchUI)
+		{
+			Font.Draw(ZLHALFW, ZLHALFH-100+100, "Tap here to return to title", ZL_Origin::Center);
+			Font.Draw(ZLHALFW, ZLHALFH-100+45, "Press [PAUSE] to continue", ZL_Origin::Center);
+		}
+		else
+		{
+			Font.Draw(ZLHALFW, ZLHALFH-100+100, "Press [ESC] again to return to title", ZL_Origin::Center);
+			Font.Draw(ZLHALFW, ZLHALFH-100+45, "Press [SPACE] to continue", ZL_Origin::Center);
+		}
 		ZL_Display::PopMatrix();
+		if (showTouchUI) touchPause.Draw(srfTouchPause);
 	}
-	if (GameState == STATE_GAMEOVER)
+	else if (GameState == STATE_GAMEOVER)
 	{
 		ZL_Vector POPUPPOS(ZLHALFW, ZLHALFH-200);
 		float zoom = MIN(ZLSINCE(GameStateTick)*.001f, 1);
@@ -676,8 +749,22 @@ static void GameDraw()
 		ZL_Display::FillRect(POPUPPOS.x-400+4, POPUPPOS.y-100+4, POPUPPOS.x+400-4, POPUPPOS.y+100-4, ZLBLACK);
 		Font.Draw(POPUPPOS.x, POPUPPOS.y-100+160, "GAME OVER", ZL_Origin::Center);
 		Font.Draw(POPUPPOS.x, POPUPPOS.y-100+100, "You died - thank you for your sacrifice", ZL_Origin::Center);
-		Font.Draw(POPUPPOS.x, POPUPPOS.y-100+45, "Press [SPACE] to return to title", ZL_Origin::Center);
+		if (showTouchUI)
+		{
+			Font.Draw(POPUPPOS.x, POPUPPOS.y-100+45, "Tap screen to return to title", ZL_Origin::Center);
+		}
+		else
+		{
+			Font.Draw(POPUPPOS.x, POPUPPOS.y-100+45, "Press [SPACE] to return to title", ZL_Origin::Center);
+		}
 		ZL_Display::PopMatrix();
+	}
+	else if (showTouchUI)
+	{
+		touchJoy.Draw(srfTouchButtons.SetTilesetIndex(2), srfTouchNub);
+		touchPickup.Draw(srfTouchButtons.SetTilesetIndex(1));
+		touchAttack.Draw(srfTouchButtons.SetTilesetIndex(0));
+		touchPause.Draw(srfTouchPause);
 	}
 }
 
