@@ -51,7 +51,7 @@ static struct sAltarWar : public ZL_Application
 
 	virtual void BeforeFrame()
 	{
-		if (showTouchUI && ZL_Input::KeyDownCount()) showTouchUI = false;
+		if (showTouchUI && ZL_Input::KeyDownCount() && !ZL_Input::Down(ZLK_ESCAPE)) showTouchUI = false;
 		else if (!showTouchUI && ZL_Input::Down(ZL_BUTTON_LEFT)) showTouchUI = true;
 	}
 } AltarWar;
